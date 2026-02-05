@@ -1,3 +1,5 @@
+<img width="2262" height="3653" alt="image" src="https://github.com/user-attachments/assets/c61e32bc-93aa-4fd8-a6c1-71da63a64bf9" />
+
 # 🛡️ 资产配置引擎 (Asset Allocation Engine)
 
 > **V18.5 修复版 | 极简主义投资者的纪律执行工具**
