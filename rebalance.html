@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>资产配置引擎 (V18.5 修复版)</title>
+    <style>
+        :root {
+            --bg-color: #0f172a; --card-bg: #1e293b; --text-main: #e2e8f0; --text-muted: #94a3b8;
+            --accent: #3b82f6; --danger: #ef4444; --success: #22c55e; --warning: #f59e0b;
+            --purple: #8b5cf6; --quarantine: #78716c; --input-bg: #0f172a; --border: #334155;
+            --sell-bg: rgba(239, 68, 68, 0.15); --sell-border: rgba(239, 68, 68, 0.4);
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); color: var(--text-main); max-width: 1100px; margin: 0 auto; padding: 20px; line-height: 1.5; }
+        h1 { text-align: center; margin-bottom: 5px; font-size: 1.5rem; letter-spacing: 1px; }
+        .subtitle { text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .card { background-color: var(--card-bg); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid var(--border); }
+        .status-bar { background: #0f172a; border-radius: 8px; padding: 12px 15px; margin-bottom: 20px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; }
+        .phase-tag { padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; letter-spacing: 0.5px; }
+        .phase-early { background: rgba(34, 197, 94, 0.15); color: var(--success); border: 1px solid rgba(34, 197, 94, 0.3); }
+        .phase-std { background: rgba(59, 130, 246, 0.15); color: var(--accent); border: 1px solid rgba(59, 130, 246, 0.3); }
+        .phase-protect { background: rgba(139, 92, 246, 0.15); color: var(--purple); border: 1px solid rgba(139, 92, 246, 0.3); }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px 8px; text-align: center; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        th { color: var(--text-muted); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; white-space: nowrap; }
+        input[type="number"], input[type="text"], select { background: var(--input-bg); border: 1px solid var(--border); color: white; padding: 8px; border-radius: 6px; text-align: center; font-family: 'Menlo', monospace; }
+        input.input-cny { width: 120px; font-weight: bold; border-color: #ffffff; color: #ffffff; }
+        select.input-currency { width: 80px; font-weight: bold; border-color: #ffffff; color: #ffffff; cursor: pointer; }
+        input.input-rate { width: 80px; }
+        input:focus, select:focus { outline: 2px solid var(--accent); border-color: transparent; }
+        input:disabled { opacity: 0.5; cursor: not-allowed; border-color: transparent; }
+        .checkbox-wrapper { display: flex; justify-content: center; align-items: center; }
+        input[type="checkbox"] { transform: scale(1.2); cursor: pointer; accent-color: var(--accent); }
+        .input-symbol { width: 70px; font-weight: bold; text-transform: uppercase; }
+        .input-target { border-color: var(--accent); color: var(--accent); font-weight: bold; width: 55px; }
+        .input-sigma { border-color: var(--text-muted); color: var(--text-muted); font-weight: bold; width: 55px; }
+        .input-price { width: 80px; }
+        .input-shares { width: 80px; }
+        .input-apikey { width: 200px !important; border-color: var(--text-muted); color: var(--accent); font-size: 0.8rem; }
+        .btn { background-color: var(--accent); color: white; border: none; padding: 14px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; font-size: 1rem; margin-top: 15px; transition: all 0.2s; }
+        .btn:hover { background-color: #2563eb; transform: translateY(-1px); }
+        .btn-small { padding: 6px 10px; font-size: 0.8rem; margin: 0 2px; width: auto; display: inline-block; border-radius: 4px; cursor: pointer; }
+        .btn-danger { background-color: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .btn-danger:hover { background-color: rgba(239, 68, 68, 0.3); }
+        .btn-move { background-color: rgba(148, 163, 184, 0.1); color: var(--text-muted); border: 1px solid var(--border); }
+        .btn-move:hover { background-color: rgba(148, 163, 184, 0.3); color: white; }
+        .btn-move:disabled { opacity: 0.2; cursor: default; }
+        .btn-add { background-color: var(--input-bg); border: 1px dashed var(--text-muted); color: var(--text-muted); margin-top: 10px; padding: 10px; }
+        .btn-add:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-action-group { background-color: var(--input-bg); border: 1px solid var(--text-muted); color: var(--text-muted); font-size: 0.9rem; width: 200px; padding: 10px 0; margin: 10px 10px; display: inline-block; text-align: center; cursor: pointer; border-radius: 8px; font-weight: bold; transition: all 0.2s; }
+        .btn-export:hover { border-color: var(--success); color: var(--success); }
+        .btn-import:hover { border-color: var(--warning); color: var(--warning); }
+        .btn-fetch { background-color: rgba(59, 130, 246, 0.1); border: 1px solid var(--accent); color: var(--accent); font-size: 0.85rem; padding: 5px 15px; border-radius: 6px; cursor: pointer; margin-bottom: 5px; transition: all 0.2s; }
+        .btn-fetch:hover { background-color: rgba(59, 130, 246, 0.2); }
+        .btn-fetch:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-refresh { background: transparent; border: none; cursor: pointer; font-size: 1.2rem; padding: 4px 8px; border-radius: 4px; transition: background 0.2s, transform 0.1s; margin-left: 5px; }
+        .btn-refresh:hover { background: rgba(255, 255, 255, 0.1); }
+        .btn-refresh:active { transform: scale(0.9); }
+        .spinning { animation: spin 1s linear infinite; pointer-events: none; opacity: 0.7; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .btn-reset { background: transparent; border: 1px solid var(--border); color: var(--text-muted); font-size: 0.8rem; margin-top: 10px; padding: 5px 10px; }
+        .result-box { display: none; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .tag { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+        .tag-safe { background: rgba(34, 197, 94, 0.2); color: var(--success); }
+        .tag-sell { background: var(--sell-bg); color: #fca5a5; border: 1px solid var(--sell-border); }
+        .tag-buy { background: rgba(59, 130, 246, 0.2); color: var(--accent); }
+        .tag-protect { background: rgba(139, 92, 246, 0.2); color: var(--purple); border: 1px solid rgba(139, 92, 246, 0.3); }
+        .tag-q { background: rgba(120, 113, 108, 0.3); color: #d6d3d1; border: 1px solid #44403c; } 
+        .tag-kill { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid var(--danger); } 
+        .log-section { font-family: 'Menlo', 'Monaco', monospace; font-size: 0.85rem; background: #0b1120; padding: 15px; border-radius: 8px; border-left: 4px solid var(--accent); white-space: pre-wrap; line-height: 1.6; }
+        .log-sell-block { background-color: var(--sell-bg); border: 1px solid var(--sell-border); color: #fca5a5; padding: 12px; border-radius: 6px; margin: 8px 0; font-weight: bold; display: flex; align-items: center; gap: 10px; }
+        .alert-box { background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: var(--warning); padding: 12px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 15px; text-align: center; font-weight: bold; }
+        .import-box { display: none; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px; }
+        textarea { width: 100%; height: 100px; background: #0b1120; border: 1px solid var(--border); color: var(--text-muted); font-family: monospace; padding: 10px; border-radius: 6px; font-size: 0.8rem; box-sizing: border-box; resize: vertical; }
+        .total-check { text-align: right; font-size: 0.85rem; margin-top: 10px; margin-right: 10px; }
+        .total-valid { color: var(--success); }
+        .total-invalid { color: var(--danger); font-weight: bold; text-decoration: underline; }
+        .info-row { display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--text-muted); padding: 8px 10px; border-top: 1px solid var(--border); margin-top: 10px; }
+        .btn-trend { font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; cursor: pointer; border: none; font-weight: bold; width: 100%; transition: all 0.2s; }
+        .trend-up { background: rgba(34, 197, 94, 0.2); color: var(--success); border: 1px solid rgba(34, 197, 94, 0.3); }
+        .trend-up:hover { background: rgba(34, 197, 94, 0.3); }
+        .trend-down { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .trend-down:hover { background: rgba(239, 68, 68, 0.3); }
+        .trend-none { background: transparent; color: var(--text-muted); cursor: default; opacity: 0.3; }
+        .decision-box { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; animation: fadeIn 0.5s; }
+        .btn-kill { background: var(--danger); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
+        .btn-kill:hover { background: #dc2626; }
+    </style>
+</head>
+<body>
+    <h1>资产配置引擎</h1>
+    <div class="subtitle">V18.5 修复版</div>
+    <div class="card">
+        <div class="status-bar" id="phaseBar" style="display:none;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:1.2rem;">🛡️</span>
+                <div>
+                    <div id="phaseText" style="font-weight:bold; margin-bottom:2px;"></div>
+                    <div id="granularityInfo" style="font-size:0.75rem; color:#94a3b8"></div>
+                </div>
+            </div>
+            <div style="text-align:right;">
+                <div style="font-size:0.75rem; color:#94a3b8">总净值 (Net Worth)</div>
+                <div id="headerNetWorth" style="font-weight:bold; color:var(--text-main); font-family:monospace;">---</div>
+            </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 5px;">
+            <div style="font-size: 0.85rem; color: var(--text-muted);">
+                API Token (Finnhub): <input type="text" id="apiToken" class="input-apikey" placeholder="粘贴 Key..." onchange="saveData()">
+            </div>
+            <button class="btn-fetch" id="fetchBtn" onclick="fetchPrices()">☁️ 更新股价 </button>
+        </div>
+        <table>
+            <thead><tr><th>代码</th><th title="启用LRS：允许手动控制趋势状态">LRS</th><th>碎股支持</th><th>目标 %</th><th>波动率 σ</th><th>股价 ($)</th><th>趋势状态 (人工)</th><th>持仓股数</th><th>操作</th></tr></thead>
+            <tbody id="inputTable"></tbody>
+        </table>
+        <button class="btn btn-add" onclick="addAsset()">+ 添加资产</button>
+        <div id="totalCheck" class="total-check">目标总计: 0%</div>
+        <div style="margin-top: 25px; border-top: 1px solid var(--border); padding-top: 20px;">
+            <div style="display: flex; align-items: center; margin-bottom: 15px; gap: 10px;">
+                <label style="font-weight:bold; min-width: 100px;">本周新增入金:</label>
+                <input type="number" id="newCashInput" value="0" min="0" class="input-cny" onchange="updateCurrencyUI(); saveData()" placeholder="0">
+                <select id="currencyType" class="input-currency" onchange="updateCurrencyUI(); saveData()">
+                    <option value="CNY">CNY</option><option value="HKD">HKD</option><option value="USD">USD</option>
+                </select>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: var(--text-muted);">
+                <label>汇率换算 (<span id="rateLabel">USD/CNY</span>): <span id="fetchStatus" style="font-size:0.8em; margin-left:5px"></span></label>
+                <div style="display:flex; align-items:center;">
+                    <input type="number" id="exchangeRate" value="" step="0.0001" min="0" placeholder="Fetching" class="input-rate" onchange="saveData()">
+                    <button id="btnRefreshRate" class="btn-refresh" onclick="fetchExchangeRate()" title="重试/刷新汇率">🔄</button>
+                </div>
+            </div>
+            <div style="text-align: right; font-size: 0.8rem; color: var(--accent); margin-top: 5px; font-family:monospace;">
+                实际入金: <span id="usdPreview">$0.00</span>
+            </div>
+        </div>
+        <button class="btn" onclick="calculate(false)">🔒 执行纪律计算</button>
+        <div style="display: flex; justify-content: center; margin-top: 15px; flex-wrap: wrap;">
+            <button id="exportBtn" class="btn-action-group btn-export" onclick="exportSnapshot()">📤 导出配置/快照</button>
+            <button class="btn-action-group btn-import" onclick="toggleImport()">📥 导入快照</button>
+        </div>
+        <div id="importArea" class="import-box">
+            <div style="margin-bottom:10px; color:var(--text-muted); font-size:0.85rem;">请粘贴之前导出的 JSON 内容：</div>
+            <textarea id="importJson" placeholder='{ "holdings": [...] }'></textarea>
+            <button class="btn" style="background-color:var(--warning); margin-top:10px;" onclick="importSnapshot()">⚠️ 确认覆盖当前数据并恢复</button>
+        </div>
+        <div style="text-align: center;">
+            <button class="btn btn-reset" onclick="resetDefaults()">重置为初始状态 (清空)</button>
+        </div>
+    </div>
+    <div id="resultSection" class="result-box">
+        <div id="decisionBox" class="decision-box" style="display:none;">
+            <div style="font-size:1.1rem; font-weight:bold; color:var(--danger); margin-bottom:5px;">⚠️ 严重警告：LRS 趋势破位</div>
+            <div style="color:#fca5a5; font-size:0.9rem; margin-bottom:10px;">
+                您已手动标记部分资产为 <strong>[趋势破位]</strong>。<br>系统处于 <strong>[隔离态]</strong>（停止买入）。资金将保留为现金避险。<br>如果您判断这是长期系统性崩盘的开始，请点击下方按钮执行清仓。
+            </div>
+            <button class="btn-kill" onclick="triggerLrsKill()">📉 确认系统性风险：执行 LRS 清仓</button>
+        </div>
+        <div class="card">
+            <h3>📊 实时持仓分析</h3>
+            <table><thead><tr><th style="text-align:left">标的</th><th>当前占比</th><th>目标</th><th>安全带宽</th><th>状态</th></tr></thead><tbody id="analysisTable"></tbody></table>
+            <div class="info-row"><span>交易后市值: <span id="investedVal" style="font-family:monospace"></span></span><span>总净值: <span id="totalNetWorth" style="font-family:monospace"></span></span></div>
+        </div>
+        <div class="card">
+            <h3>🚀 本周操作指令 (SOP)</h3>
+            <div class="alert-box">⚠️ 警告：本引擎输出已包含所有保护逻辑。<br>请勿在本周手动执行任何反向交易。</div>
+            <div id="actionLog" class="log-section"></div>
+        </div>
+    </div>
+<script>
+    const STORAGE_KEY = 'portfolio_v18_4_final';
+    const K_FACTOR = 0.8, MIN_BAND = 0.15, PROTECT_RATIO = 35, MAX_WATERFALL_STEPS = 10, MIN_INTEGER_BUY = 1, QUARANTINE_SELL_THRESHOLD = 1.5;
+    const DEFAULT_DATA = [];
+    let appData = [], lastCalculationResult = null, cachedRates = { CNY: null, HKD: null };
+
+    function init() { loadData(); renderInputs(); updateCurrencyUI(); updateTotalCheck(); updateUSDPreview(); fetchExchangeRate(); }
+
+    async function fetchPrices() {
+        updateAppDataFromDOM();
+        const apiKey = document.getElementById('apiToken').value.trim();
+        if (!apiKey) { alert("请先在上方输入 Finnhub API Token"); return; }
+        const btn = document.getElementById('fetchBtn'), originalText = "☁️ 更新股价 ";
+        btn.innerText = "⏳ 获取中..."; btn.disabled = true;
+        let updatedCount = 0;
+        await Promise.all(appData.map(async (asset) => {
+            if (!asset.symbol || asset.symbol === 'ASSET') return;
+            try {
+                const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${asset.symbol}&token=${apiKey}`);
+                const data = await res.json();
+                if (data.c && data.c > 0) { asset.price = data.c; updatedCount++; }
+            } catch (e) { console.error(`Error ${asset.symbol}:`, e); }
+        }));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+        if (updatedCount > 0) { btn.innerText = "✅ 更新成功"; setTimeout(() => { btn.innerText = originalText; btn.disabled = false; }, 1000); }
+        else { alert("⚠️ 更新失败，请检查 API Token。"); btn.innerText = originalText; btn.disabled = false; }
+        renderInputs(); updateTotalCheck(); updateUSDPreview();
+    }
+
+    function updateCurrencyUI() {
+        const type = document.getElementById('currencyType').value, rateInput = document.getElementById('exchangeRate');
+        if (type === 'CNY') { rateInput.value = cachedRates.CNY || ""; rateInput.disabled = false; }
+        else if (type === 'HKD') { rateInput.value = cachedRates.HKD || ""; rateInput.disabled = false; }
+        else { rateInput.value = 1.0; rateInput.disabled = true; }
+        updateUSDPreview();
+    }
+
+    function updateUSDPreview() {
+        let amt = parseFloat(document.getElementById('newCashInput').value) || 0, rate = parseFloat(document.getElementById('exchangeRate').value) || 0, type = document.getElementById('currencyType').value;
+        document.getElementById('usdPreview').innerText = `$${(type==='USD'?amt:(rate>0?amt/rate:0)).toFixed(2)}`;
+    }
+
+    function getDefaultSigma(s) {
+        if (s.includes('QQQ')) return 0.20; if (s.includes('QLD')||s.includes('SSO')) return 0.40;
+        if (s.includes('TQQQ')||s.includes('UPRO')) return 0.60; if (s.includes('VOO')||s.includes('SPY')) return 0.15;
+        if (['TSLA','NVDA','MSTR'].some(x=>s.includes(x))) return 0.55; if (s.includes('IBIT')) return 0.70; return 0.25;
+    }
+
+    async function fetchExchangeRate() {
+        const btn = document.getElementById('btnRefreshRate'); btn.classList.add('spinning');
+        try {
+            const res = await fetch('https://open.er-api.com/v6/latest/USD'), data = await res.json();
+            if (data && data.rates) { if(data.rates.CNY) cachedRates.CNY=data.rates.CNY.toFixed(4); if(data.rates.HKD) cachedRates.HKD=data.rates.HKD.toFixed(4); updateCurrencyUI(); }
+        } catch (e) {} finally { setTimeout(() => btn.classList.remove('spinning'), 500); }
+    }
+
+    function loadData() {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        appData = saved ? JSON.parse(saved).map(a => ({...a, supportsFractional: a.supportsFractional||false, sigma: a.sigma||getDefaultSigma(a.symbol), lrs: a.lrs||false, manualRiskOff: a.manualRiskOff||false})) : JSON.parse(JSON.stringify(DEFAULT_DATA));
+        const c = localStorage.getItem(STORAGE_KEY+'_cash'), r = localStorage.getItem(STORAGE_KEY+'_rate'), t = localStorage.getItem(STORAGE_KEY+'_token');
+        if (c) document.getElementById('newCashInput').value = c; if (t) document.getElementById('apiToken').value = t; if (r) document.getElementById('exchangeRate').value = r;
+    }
+
+    function updateAppDataFromDOM() {
+        document.querySelectorAll('#inputTable tr').forEach((row, i) => {
+            if (appData[i]) {
+                appData[i].symbol = row.querySelector('.input-symbol').value.toUpperCase();
+                appData[i].lrs = row.querySelector('.input-lrs').checked;
+                appData[i].supportsFractional = row.querySelector('.input-fractional').checked;
+                appData[i].target = parseFloat(row.querySelector('.input-target').value)||0;
+                appData[i].sigma = parseFloat(row.querySelector('.input-sigma').value)||0;
+                appData[i].price = parseFloat(row.querySelector('.input-price').value)||0;
+                appData[i].shares = parseFloat(row.querySelector('.input-shares').value)||0;
+            }
+        });
+    }
+
+    function saveData() {
+        updateAppDataFromDOM();
+        localStorage.setItem(STORAGE_KEY+'_cash', document.getElementById('newCashInput').value);
+        localStorage.setItem(STORAGE_KEY+'_currency', document.getElementById('currencyType').value);
+        localStorage.setItem(STORAGE_KEY+'_rate', document.getElementById('exchangeRate').value);
+        localStorage.setItem(STORAGE_KEY+'_token', document.getElementById('apiToken').value);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+        updateTotalCheck(); updateUSDPreview();
+    }
+
+    function toggleImport() { const el = document.getElementById('importArea'); el.style.display = el.style.display === 'block' ? 'none' : 'block'; }
+    function importSnapshot() {
+        const jsonStr = document.getElementById('importJson').value; if (!jsonStr) { alert("请先粘贴 JSON"); return; }
+        try {
+            const data = JSON.parse(jsonStr); if (!data.holdings) throw new Error("无效格式");
+            appData = data.holdings.map(h => ({...h, lrs: h.lrs||false, manualRiskOff: h.manualRiskOff||false, sigma: h.sigma||getDefaultSigma(h.symbol)}));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+            if (data.inputs) { if(data.inputs.cash) document.getElementById('newCashInput').value=data.inputs.cash; if(data.inputs.apiToken) document.getElementById('apiToken').value=data.inputs.apiToken; }
+            renderInputs(); updateTotalCheck(); document.getElementById('resultSection').style.display='none'; document.getElementById('importArea').style.display='none'; alert("✅ 导入成功");
+        } catch (e) { alert("❌ 导入失败: " + e.message); }
+    }
+
+    function exportSnapshot() {
+        saveData();
+        const j = JSON.stringify({date: new Date().toLocaleString(), holdings: appData, inputs: {cash: document.getElementById('newCashInput').value, currency: document.getElementById('currencyType').value, rate: document.getElementById('exchangeRate').value, apiToken: document.getElementById('apiToken').value}, log: lastCalculationResult?lastCalculationResult.log:[]}, null, 2);
+        const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(j); a.download = `portfolio_${new Date().toISOString().slice(0,10)}.json`; a.click();
+    }
+
+    function resetDefaults() { if(confirm('⚠️ 清空数据？')) { appData = JSON.parse(JSON.stringify(DEFAULT_DATA)); localStorage.setItem(STORAGE_KEY, JSON.stringify(appData)); document.getElementById('newCashInput').value=0; renderInputs(); updateTotalCheck(); } }
+    function addAsset() { appData.push({ symbol: 'NEW', supportsFractional: true, lrs: false, manualRiskOff: false, target: 0, sigma: 0.25, price: 0, shares: 0 }); saveData(); renderInputs(); }
+    function deleteAsset(i) { if(appData.length <= 1) return; updateAppDataFromDOM();if(confirm(`删除 ${appData[i].symbol}?`)) {appData.splice(i, 1);renderInputs();saveData();} }
+    function moveAsset(i, d) { updateAppDataFromDOM(); const n = i+d; if (n>=0 && n<appData.length) { [appData[i], appData[n]] = [appData[n], appData[i]]; renderInputs(); saveData(); } }
+    function toggleTrend(i) { if (!appData[i].lrs) return; appData[i].manualRiskOff = !appData[i].manualRiskOff; saveData(); renderInputs(); }
+
+    function renderInputs() {
+        const tbody = document.getElementById('inputTable'); tbody.innerHTML = '';
+        appData.forEach((a, i) => {
+            const tr = document.createElement('tr');
+            let trend = '<span class="trend-none">---</span>';
+            if (a.lrs) trend = a.manualRiskOff ? `<button class="btn-trend trend-down" onclick="toggleTrend(${i})">📉 趋势破位</button>` : `<button class="btn-trend trend-up" onclick="toggleTrend(${i})">🟢 趋势向上</button>`;
+            tr.innerHTML = `
+                <td><input type="text" class="input-symbol" value="${a.symbol}" onchange="saveData()"></td>
+                <td><div class="checkbox-wrapper"><input type="checkbox" class="input-lrs" ${a.lrs?'checked':''} onchange="saveData(); renderInputs();"></div></td>
+                <td><div class="checkbox-wrapper"><input type="checkbox" class="input-fractional" ${a.supportsFractional?'checked':''} onchange="saveData()"></div></td>
+                <td><input type="number" class="input-target" min="0" value="${a.target}" onchange="saveData()"></td>
+                <td><input type="number" class="input-sigma" step="0.01" min="0" value="${a.sigma}" onchange="saveData()"></td>
+                <td><input type="number" class="input-price" step="0.01" min="0" value="${a.price||''}" onchange="saveData()"></td>
+                <td>${trend}</td>
+                <td><input type="number" class="input-shares" step="0.001" min="0" value="${a.shares||''}" onchange="saveData()"></td>
+                <td><button class="btn-small btn-move" onclick="moveAsset(${i},-1)">⬆️</button><button class="btn-small btn-move" onclick="moveAsset(${i},1)">⬇️</button><button class="btn-small btn-danger" onclick="deleteAsset(${i})">✕</button></td>`;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function updateTotalCheck() {
+        let t = 0; document.querySelectorAll('.input-target').forEach(i => t += parseFloat(i.value)||0);
+        const el = document.getElementById('totalCheck'); el.innerHTML = `目标总计: ${t.toFixed(1)}% ` + (Math.abs(t-100)>0.1 ? '<span class="total-invalid">❌</span>' : '<span class="total-valid">✅</span>');
+        return Math.abs(t-100)<0.1;
+    }
+
+    function checkPhase(nw, maxP) {
+        const ph = localStorage.getItem(STORAGE_KEY+'_phase')||'STD', r = nw/(maxP||1), isP = (ph==='PROTECT'?r<(PROTECT_RATIO+10):r<PROTECT_RATIO);
+        if((isP?'PROTECT':'STD')!==ph) localStorage.setItem(STORAGE_KEY+'_phase', isP?'PROTECT':'STD'); return isP;
+    }
+
+    function triggerLrsKill() { if(confirm("🛑 严重警告：确认执行 LRS 清仓？")) calculate(true); }
+
+    function calculate(kill) {
+        saveData(); if(!updateTotalCheck()){ alert("❌ 配比非100%"); return; }
+        let inv=0, cur=[], mxP=0, cash=parseFloat(document.getElementById('newCashInput').value)||0, rate=parseFloat(document.getElementById('exchangeRate').value)||1, type=document.getElementById('currencyType').value;
+        let pool = type==='USD' ? cash : (rate>0 ? cash/rate : 0);
+        if (cash<0) { alert("入金<0"); return; }
+        let broken = false;
+
+        appData.forEach(a => {
+            let v = a.price*a.shares; inv += v; if(!a.supportsFractional && a.price>mxP) mxP=a.price;
+            let down = a.lrs && a.manualRiskOff===true; if(down) broken=true;
+            let m = 'NORMAL'; if(down) m = kill ? 'KILL' : 'QUARANTINE';
+            cur.push({...a, value: v, targetPct: a.target/100, safeBand: Math.max(MIN_BAND, K_FACTOR*(a.sigma||0.25)), mode: m});
+        });
+
+        let nw = inv+pool; if(nw===0){ alert("总资产0"); return; }
+        let isP = checkPhase(nw, mxP), rVal = mxP>0?(nw/mxP).toFixed(1)+"x":"∞";
+        document.getElementById('phaseBar').style.display='flex';
+        document.getElementById('phaseText').innerHTML = isP ? `<span class="phase-tag phase-protect">🟣 小资金保护期</span>` : `<span class="phase-tag phase-std">🔵 标准资产期</span>`;
+        document.getElementById('granularityInfo').innerText = `规模: ${rVal} (阈: ${PROTECT_RATIO}x)`;
+        document.getElementById('headerNetWorth').innerText = `$${nw.toFixed(2)}`;
+
+        let log = [`📅 ${new Date().toLocaleString()}`, `💰 净值: $${nw.toFixed(2)} | 现金: $${pool.toFixed(2)}`];
+        if(kill) log.push(`🛑 LRS 清仓执行`);
+        let html='', sellAct=[], blk=new Set();
+
+        // Sell
+        cur.forEach(h => {
+            let tVal = nw*h.targetPct, pct = h.value/nw, up = h.targetPct*(1+h.safeBand), low = h.targetPct*(1-h.safeBand);
+            let st = '<span class="tag tag-safe">安全</span>', amt = 0, rea = '';
+            
+            if (h.mode === 'KILL') { amt = h.value; rea = 'LRS清仓'; blk.add(h.symbol); st = '<span class="tag tag-kill">LRS</span>'; }
+            else if (h.mode === 'QUARANTINE') {
+                blk.add(h.symbol); let lim = tVal * QUARANTINE_SELL_THRESHOLD;
+                if (h.value > lim) { amt = h.value - lim; rea = '高压阀'; st = '<span class="tag tag-sell">高压</span>'; }
+                else st = '<span class="tag tag-q">隔离</span>';
+            }
+            else if (pct > up) {
+                if (h.supportsFractional || h.targetPct<=0) { amt = h.value-tVal; rea = '触顶'; st = '<span class="tag tag-sell">触顶</span>'; blk.add(h.symbol); }
+                else {
+                    if ((isP && (h.value-tVal)<h.price) || ((h.value-h.price)/nw < low)) st = '<span class="tag tag-protect">防超</span>';
+                    else { amt = h.price; rea = '1股'; st = '<span class="tag tag-sell">1股</span>'; blk.add(h.symbol); }
+                }
+            } else if (pct < low) st = '<span class="tag tag-buy">低估</span>';
+
+            if (amt > 0) {
+                let sh = amt/h.price; h.shares -= sh; h.value -= amt; pool += amt;
+                sellAct.push(`<div class="log-sell-block">⚠️ [${h.symbol}] ${rea} -> 卖 $${amt.toFixed(2)}</div>`);
+            }
+            html += `<tr><td style="font-weight:bold">${h.symbol}</td><td>${(pct*100).toFixed(2)}%</td><td>${(h.targetPct*100).toFixed(0)}%</td><td>±${(h.safeBand*100).toFixed(1)}%</td><td>${st}</td></tr>`;
+        });
+        if(sellAct.length) log.push(...sellAct); else log.push(`✅ 无卖出`);
+
+        // Buy
+        log.push(`\n🌊 买入 (可用: $${pool.toFixed(2)})`);
+        if (pool > 10) {
+            let step = 0, last = null;
+            while (pool > 10 && step++ < MAX_WATERFALL_STEPS) {
+                let tgt = null, minR = Infinity;
+                cur.forEach(h => {
+                    if (blk.has(h.symbol) || h.mode!=='NORMAL' || h.targetPct<=0) return;
+                    let r = h.value / (nw * h.targetPct); if (r < minR) { minR = r; tgt = h; }
+                });
+                if (!tgt || tgt.symbol === last) break;
+
+                let gap = Math.max(0, (nw*tgt.targetPct) - tgt.value), buy = 0;
+                if (!tgt.supportsFractional) {
+                    let aff = Math.floor(pool/tgt.price);
+                    if (aff>=1 && (tgt.value+tgt.price) < (nw*tgt.targetPct*(1+tgt.safeBand))) buy = Math.floor(Math.min(pool,gap)/tgt.price)*tgt.price;
+                    if (buy<tgt.price && aff>=1 && tgt.value<(nw*tgt.targetPct)) buy=tgt.price;
+                } else buy = (gap>0) ? Math.min(pool, gap) : 0;
+
+                if (buy > 0) {
+                    let sh = buy/tgt.price; pool -= buy; tgt.value += buy; tgt.shares += sh; last = tgt.symbol;
+                    log.push(`👉 [轮次 ${step}] 买 ${tgt.symbol}: ${sh.toFixed(4)}股 ($${buy.toFixed(2)})`);
+                } else break;
+            }
+            // Overflow Fix
+            if (pool > 5) {
+                if (pool > nw*0.01) log.push(`\n🛡️ 剩余 $${pool.toFixed(2)} (>1%) 保留避险`);
+                else {
+                    let best = null, mr = Infinity;
+                    cur.forEach(h => { if(h.supportsFractional && !blk.has(h.symbol) && h.mode==='NORMAL'){ let r=h.value/(nw*h.targetPct); if(r<mr){mr=r;best=h;} }});
+                    if (best && pool < (nw*best.targetPct*(1+best.safeBand)-best.value)*1.2) {
+                        let sh = pool/best.price; best.value+=pool; best.shares+=sh;
+                        log.push(`💧 扫尾 ${best.symbol}: $${pool.toFixed(2)}`); pool=0;
+                    } else log.push(`⚠️ 无合适碎股标的，保留现金`);
+                }
+            }
+        } else log.push(`⚪ 资金不足`);
+
+        let fInv = cur.reduce((s, h) => s + h.value, 0);
+        document.getElementById('analysisTable').innerHTML = html; document.getElementById('actionLog').innerHTML = log.join('\n');
+        document.getElementById('investedVal').innerText = `$${fInv.toFixed(2)}`; document.getElementById('totalNetWorth').innerText = `$${(fInv+pool).toFixed(2)}`;
+        
+        const db = document.getElementById('decisionBox');
+        if (broken && !kill) { db.style.display = 'block'; db.scrollIntoView({behavior: "smooth"}); } else db.style.display = 'none';
+        document.getElementById('resultSection').style.display = 'block';
+        lastCalculationResult = { date: new Date().toLocaleString(), log: log, phase: isP ? 'PROTECT' : 'STD' };
+        document.getElementById('exportBtn').style.display = 'inline-block';
+    }
+    init();
+</script></body></html>
