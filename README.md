@@ -1,3 +1,10 @@
+<div align="center">
+  <a href="https://muxinzhuo.github.io/investment-dashboard/">
+    <img src="https://img.shields.io/badge/🚀_点击这里_立刻启动工具-Start-blue?style=for-the-badge&logo=rocket&logoColor=white" height="50">
+  </a>
+</div>
+
+<br>
 <img width="2262" height="3653" alt="image" src="https://github.com/user-attachments/assets/c61e32bc-93aa-4fd8-a6c1-71da63a64bf9" />
 
 # 🛡️ 资产配置引擎 (Asset Allocation Engine)
