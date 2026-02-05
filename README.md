@@ -1,7 +1,9 @@
 <div align="center">
-  <a href="https://muxinzhuo.github.io/investment-dashboard/">
-    <img src="https://img.shields.io/badge/🚀_点击这里_立刻启动工具-Start-blue?style=for-the-badge&logo=rocket&logoColor=white" height="50">
+  <a href="https://muxinzhuo.github.io/investment-dashboard/" target="_blank">
+    <img src="https://capsule-render.vercel.app/api?type=rect&color=0066ff&height=70&section=header&text=🚀%20点击这里%20|%20立刻启动工具&fontSize=30&fontColor=ffffff&animation=fadeIn" alt="立刻启动" width="500">
   </a>
+  
+  <p>👆 点这个巨大的蓝色按钮立刻就能用！ 👆</p>
 </div>
 
 <br>
