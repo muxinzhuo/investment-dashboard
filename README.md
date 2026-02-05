@@ -45,7 +45,7 @@
 
 ### 1. 准备工作
 本工具是一个独立的 `.html` 文件。
-* **下载**：下载本项目中的 `rebalance.html`。
+* **下载**：下载本项目中的 `index.html`。
 * **运行**：直接用 Chrome / Edge / Safari 浏览器打开该文件即可。
 * **获取 API Key（可选但推荐）**：
     为了自动更新股价，建议去 [Finnhub.io](https://finnhub.io/) 注册一个免费账号，复制你的 API Key。
