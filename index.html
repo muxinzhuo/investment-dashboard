@@ -240,7 +240,8 @@
                 appData[i].target = parseFloat(row.querySelector('.input-target').value)||0;
                 appData[i].sigma = parseFloat(row.querySelector('.input-sigma').value)||0;
                 appData[i].price = parseFloat(row.querySelector('.input-price').value)||0;
-                appData[i].shares = parseFloat(row.querySelector('.input-shares').value)||0;
+                let rawShares = parseFloat(row.querySelector('.input-shares').value)||0;
+                appData[i].shares = appData[i].supportsFractional ? rawShares : Math.floor(rawShares);
             }
         });
     }
@@ -288,12 +289,12 @@
             tr.innerHTML = `
                 <td><input type="text" class="input-symbol" value="${a.symbol}" onchange="saveData()"></td>
                 <td><div class="checkbox-wrapper"><input type="checkbox" class="input-lrs" ${a.lrs?'checked':''} onchange="saveData(); renderInputs();"></div></td>
-                <td><div class="checkbox-wrapper"><input type="checkbox" class="input-fractional" ${a.supportsFractional?'checked':''} onchange="saveData()"></div></td>
+                <td><div class="checkbox-wrapper"><input type="checkbox" class="input-fractional" ${a.supportsFractional?'checked':''} onchange="saveData(); renderInputs();"></div></td>
                 <td><input type="number" class="input-target" min="0" value="${a.target}" onchange="saveData()"></td>
                 <td><input type="number" class="input-sigma" step="0.01" min="0" value="${a.sigma}" onchange="saveData()"></td>
                 <td><input type="number" class="input-price" step="0.01" min="0" value="${a.price||''}" onchange="saveData()"></td>
                 <td>${trend}</td>
-                <td><input type="number" class="input-shares" step="0.001" min="0" value="${a.shares||''}" onchange="saveData()"></td>
+                <td><input type="number" class="input-shares" step="${a.supportsFractional ? '0.0001' : '1'}" min="0" value="${a.shares||''}" onchange="saveData(); renderInputs();"></td>
                 <td><button class="btn-small btn-move" onclick="moveAsset(${i},-1)">⬆️</button><button class="btn-small btn-move" onclick="moveAsset(${i},1)">⬇️</button><button class="btn-small btn-danger" onclick="deleteAsset(${i})">✕</button></td>`;
             tbody.appendChild(tr);
         });
@@ -413,4 +414,6 @@
         document.getElementById('exportBtn').style.display = 'inline-block';
     }
     init();
-</script></body></html>
+</script>
+</body>
+</html>
